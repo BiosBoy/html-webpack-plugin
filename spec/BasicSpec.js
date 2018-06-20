@@ -34,6 +34,7 @@ if (Number(extractTextPluginMajorVersion) > 1) {
 var OUTPUT_DIR = path.join(__dirname, '../dist');
 
 jasmine.getEnv().defaultTimeoutInterval = 30000;
+process.traceDeprecation = true;
 
 function transformCommonChunkConfigToOptimization (config) {
   if (config.name === 'common') {

@@ -15,10 +15,13 @@ var webpackMajorVersion = require('webpack/package.json').version.split('.')[0];
 var OUTPUT_DIR = path.join(__dirname, '../dist');
 
 jasmine.getEnv().defaultTimeoutInterval = 30000;
+process.traceDeprecation = true;
 
 function setUpCompiler (htmlWebpackPlugin) {
   spyOn(htmlWebpackPlugin, 'evaluateCompilationResult').and.callThrough();
   var webpackConfig = {
+    // Caching works only in development
+    mode: 'development',
     entry: path.join(__dirname, 'fixtures/index.js'),
     output: {
       path: OUTPUT_DIR,
@@ -33,12 +36,21 @@ function setUpCompiler (htmlWebpackPlugin) {
   return compiler;
 }
 
-function getCompiledModuleCount (statsJson) {
-  return statsJson.modules.filter(function (webpackModule) {
+function getCompiledModules (statsJson) {
+  const builtModules = statsJson.modules.filter(function (webpackModule) {
     return webpackModule.built;
-  }).length + statsJson.children.reduce(function (sum, childCompilationStats) {
-    return sum + getCompiledModuleCount(childCompilationStats);
-  }, 0);
+  }).map((webpackModule) => {
+    return module.userRequest;
+  });
+  statsJson.children.forEach((childCompilationStats) => {
+    const builtChildModules = getCompiledModules(childCompilationStats);
+    Array.prototype.push.apply(builtModules, builtChildModules);
+  });
+  return builtModules;
+}
+
+function getCompiledModuleCount (statsJson) {
+  return getCompiledModules(statsJson).length;
 }
 
 describe('HtmlWebpackPluginCaching', function () {
@@ -53,6 +65,7 @@ describe('HtmlWebpackPluginCaching', function () {
     });
     var childCompilerHash;
     var compiler = setUpCompiler(htmlWebpackPlugin);
+    compiler.addTestFile(path.join(__dirname, 'fixtures/index.js'));
     compiler.run()
       // Change the template file and compile again
       .then(function () {
@@ -60,9 +73,11 @@ describe('HtmlWebpackPluginCaching', function () {
         return compiler.run();
       })
       .then(function (stats) {
+        // Expect no errors:
+        expect(stats.compilation.errors).toEqual([]);
         // Verify that no file was built
-        expect(getCompiledModuleCount(stats.toJson()))
-          .toBe(0);
+        expect(getCompiledModules(stats.toJson()))
+          .toEqual([]);
         // Verify that the html was processed only during the inital build
         expect(htmlWebpackPlugin.evaluateCompilationResult.calls.count())
           .toBe(1);
@@ -77,6 +92,7 @@ describe('HtmlWebpackPluginCaching', function () {
     var htmlWebpackPlugin = new HtmlWebpackPlugin();
     var compiler = setUpCompiler(htmlWebpackPlugin);
     var childCompilerHash;
+    compiler.addTestFile(path.join(__dirname, 'fixtures/index.js'));
     compiler.run()
       // Change a js file and compile again
       .then(function () {
@@ -85,6 +101,8 @@ describe('HtmlWebpackPluginCaching', function () {
         return compiler.run();
       })
       .then(function (stats) {
+        // Expect no errors:
+        expect(stats.compilation.errors).toEqual([]);
         // Verify that only one file was built
         expect(getCompiledModuleCount(stats.toJson()))
           .toBe(1);
@@ -104,6 +122,7 @@ describe('HtmlWebpackPluginCaching', function () {
     });
     var childCompilerHash;
     var compiler = setUpCompiler(htmlWebpackPlugin);
+    compiler.addTestFile(path.join(__dirname, 'fixtures/index.js'));
     compiler.run()
       // Change a js file and compile again
       .then(function () {
@@ -112,6 +131,8 @@ describe('HtmlWebpackPluginCaching', function () {
         return compiler.run();
       })
       .then(function (stats) {
+        // Expect no errors:
+        expect(stats.compilation.errors).toEqual([]);
         // Verify that only one file was built
         expect(getCompiledModuleCount(stats.toJson()))
           .toBe(1);
@@ -132,6 +153,7 @@ describe('HtmlWebpackPluginCaching', function () {
     });
     var childCompilerHash;
     var compiler = setUpCompiler(htmlWebpackPlugin);
+    compiler.addTestFile(template);
     compiler.run()
       // Change the template file and compile again
       .then(function () {
@@ -140,6 +162,8 @@ describe('HtmlWebpackPluginCaching', function () {
         return compiler.run();
       })
       .then(function (stats) {
+        // Expect no errors:
+        expect(stats.compilation.errors).toEqual([]);
         // Verify that only one file was built
         expect(getCompiledModuleCount(stats.toJson()))
           .toBe(1);
