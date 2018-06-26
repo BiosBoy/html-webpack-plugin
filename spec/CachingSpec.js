@@ -20,6 +20,7 @@ process.traceDeprecation = true;
 function setUpCompiler (htmlWebpackPlugin) {
   spyOn(htmlWebpackPlugin, 'evaluateCompilationResult').and.callThrough();
   var webpackConfig = {
+    context: __dirname,
     // Caching works only in development
     mode: 'development',
     entry: path.join(__dirname, 'fixtures/index.js'),
