@@ -20,7 +20,7 @@ process.traceDeprecation = true;
 function setUpCompiler (htmlWebpackPlugin) {
   spyOn(htmlWebpackPlugin, 'evaluateCompilationResult').and.callThrough();
   var webpackConfig = {
-    context: __dirname,
+    stats: {all: true},
     // Caching works only in development
     mode: 'development',
     entry: path.join(__dirname, 'fixtures/index.js'),
@@ -54,6 +54,18 @@ function getCompiledModuleCount (statsJson) {
   return getCompiledModules(statsJson).length;
 }
 
+function expectNoErrors (stats) {
+  const errors = {
+    main: stats.compilation.errors,
+    childCompilation: []
+  };
+  stats.compilation.children.forEach((child) => {
+    Array.prototype.push.apply(errors.childCompilation, child.errors);
+  });
+  expect(errors.main).toEqual([]);
+  expect(errors.childCompilation).toEqual([]);
+}
+
 describe('HtmlWebpackPluginCaching', function () {
   beforeEach(function (done) {
     rimraf(OUTPUT_DIR, done);
@@ -75,7 +87,7 @@ describe('HtmlWebpackPluginCaching', function () {
       })
       .then(function (stats) {
         // Expect no errors:
-        expect(stats.compilation.errors).toEqual([]);
+        expectNoErrors(stats);
         // Verify that no file was built
         expect(getCompiledModules(stats.toJson()))
           .toEqual([]);
@@ -103,7 +115,7 @@ describe('HtmlWebpackPluginCaching', function () {
       })
       .then(function (stats) {
         // Expect no errors:
-        expect(stats.compilation.errors).toEqual([]);
+        expectNoErrors(stats);
         // Verify that only one file was built
         expect(getCompiledModuleCount(stats.toJson()))
           .toBe(1);
@@ -133,7 +145,7 @@ describe('HtmlWebpackPluginCaching', function () {
       })
       .then(function (stats) {
         // Expect no errors:
-        expect(stats.compilation.errors).toEqual([]);
+        expectNoErrors(stats);
         // Verify that only one file was built
         expect(getCompiledModuleCount(stats.toJson()))
           .toBe(1);
@@ -164,7 +176,7 @@ describe('HtmlWebpackPluginCaching', function () {
       })
       .then(function (stats) {
         // Expect no errors:
-        expect(stats.compilation.errors).toEqual([]);
+        expectNoErrors(stats);
         // Verify that only one file was built
         expect(getCompiledModuleCount(stats.toJson()))
           .toBe(1);
