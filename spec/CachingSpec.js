@@ -62,6 +62,12 @@ function expectNoErrors (stats) {
   stats.compilation.children.forEach((child) => {
     Array.prototype.push.apply(errors.childCompilation, child.errors);
   });
+  if (errors.main.length) {
+    errors.main.forEach((error) => {
+      console.log('Error => ', error);
+    });
+    console.dir(stats.toJson({errorDetails: true, moduleTrace: true}), { depth: 5 });
+  }
   expect(errors.main).toEqual([]);
   expect(errors.childCompilation).toEqual([]);
 }
